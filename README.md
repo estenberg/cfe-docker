@@ -5,12 +5,15 @@ Create Docker containers with managed processes.
 
 Docker monitors one process in each container and the container lives or dies with that process.
 CFEngine-managed Docker containers solve a couple of problem areas related to this:
+
 * It is possible to easily start multiple processes within a container, all of which will be managed automatically
 * If a managed process dies, e.g. due to a bug in application code, CFEngine will start it again within 1 minute
 * The container will live as long as the CFEngine scheduling daemon (cf-execd) lives
 
 
 ## Usage
+
+This guide assumes you have Docker installed and working. Instructions can be found at the [Docker web site](http://www.docker.io/gettingstarted/#h_installation).
 
 There are three steps:
 
@@ -43,7 +46,7 @@ RUN apt-get install cfengine-community
 ENTRYPOINT ["/var/cfengine/bin/docker_processes_run.sh"]
 ```
 
-By saving this file as Dockerfile, you can then build your container with the familiar docker build command, e.g.
+By saving this file as Dockerfile to a working directory, you can then build your container with the docker build command, e.g.
 ```
 docker build -t my_managed_app_image .
 ```
@@ -60,7 +63,8 @@ In this example, myapp and daemon will be started and and managed by CFEngine.
 In this example, we will install sshd and apache2.
 The processes will be started and managed by CFEngine.
 
-Input this as your Dockerfile (also available at https://github.com/estenberg/cfe-docker/blob/master/Dockerfile).
+Input this as your Dockerfile (also available on [github](https://github.com/estenberg/cfe-docker/blob/master/Dockerfile)),
+and save it to a directory of your choice. It needs to be the same directory as the docker build command is run from below.
 
 ```
 FROM ubuntu
@@ -99,7 +103,8 @@ Start the container with apache2 and sshd running and managed, forwarding a port
 docker run -p 127.0.0.1:222:22 -d managed_image "/usr/sbin/sshd" "/etc/init.d/apache2 start"
 ```
 
-We can now log in to our new container, and see that both apache2 and sshd are running:
+We can now log in to our new container and see that both apache2 and sshd are running. We have set the root password to
+"password" in the Dockerfile above and can use that to log in with ssh:
 
 ```
 ssh -p222 root@127.0.0.1
@@ -121,15 +126,15 @@ root       112   105  0 07:49 pts/0    00:00:00 ps -ef
 If we stop apache2, it will be started again within a minute by CFEngine.
 
 ```
-# /etc/init.d/apache2 status
+# service apache2 status
 Apache2 is running (pid 32).
-# /etc/init.d/apache2 stop
+# service apache2 stop
  * Stopping web server apache2                                                                                                                         /usr/sbin/apache2ctl: 87: ulimit: error setting limit (Operation not permitted)
 apache2: Could not reliably determine the server's fully qualified domain name, using 127.0.0.1 for ServerName
  ... waiting                                                                                                                                    [ OK ]
-# /etc/init.d/apache2 status
+# service apache2 status
 Apache2 is NOT running.
 # ... wait up to 1 minute...
-# /etc/init.d/apache2 status
+# service apache2 status
 Apache2 is running (pid 173).
 ```
