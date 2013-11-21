@@ -11,10 +11,11 @@ RUN apt-get install cfengine-community
 
 # install cfe-docker process management policy
 wget https://github.com/estenberg/cfe-docker/archive/master.zip -P /tmp/ && unzip /tmp/master.zip -d /tmp/
-cp /tmp/cfe-docker-master/bin/* /var/cfengine/bin/
-cp /tmp/cfe-docker-master/inputs/* /var/cfengine/inputs/
+cp /tmp/cfe-docker-master/cfengine/bin/* /var/cfengine/bin/
+cp /tmp/cfe-docker-master/cfengine/inputs/* /var/cfengine/inputs/
 rm -rf /tmp/cfe-docker-master /tmp/master.zip
 
+# apache2 and openssh is just for testing purposes
 RUN apt-get -y install openssh-server apache2
 RUN mkdir -p /var/run/sshd
 RUN echo "root:password" | chpasswd  # need a password for ssh
