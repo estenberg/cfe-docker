@@ -1,0 +1,12 @@
+body common control
+{
+inputs => { "processes.cf" };
+bundlesequence =>  { "processes" };
+}
+
+
+body executor control
+{
+exec_command => "/var/cfengine/bin/cf-agent";
+schedule => { "any" };  # minute resolution
+}

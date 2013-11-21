@@ -1,0 +1,2 @@
+# speed up CFEngine inventory discovery by ignoring docker interfaces
+eth.*

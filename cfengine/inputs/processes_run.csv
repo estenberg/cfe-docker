@@ -1,0 +1,7 @@
+# CFEngine process monitoring and repair.
+# If there is no process in the process table matching the first column,
+# the command in the second column will be run to start it.
+# The process does not have to start in the foreground, it will be backgrounded.
+#
+# STRUCTURE: PROCESS_NAME, START_COMMAND
+# apache2, /etc/init.d/apache2 start

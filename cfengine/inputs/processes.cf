@@ -1,0 +1,26 @@
+bundle agent processes
+{
+vars:
+  "count" int => readstringarray( "ensure_running", "$(sys.workdir)/inputs/processes_run.csv", "#[^\n]*", ",\s*", 100, 10000 );
+  "indices" slist => getindices( "ensure_running" );
+  "process_names" slist => filter( "[0-9]+", "indices", "true", "true", 100 );
+
+
+processes:
+  "$(process_names)"
+    comment => "Look for processes in process table",
+    restart_class => canonify( "not_running_$(process_names)" );
+
+
+commands:
+  "$(ensure_running[$(process_names)][1]) > /dev/null < /dev/null 2>&1 &"
+    comment => "Start processes that are not running and close their file descriptors",
+    contain => shell,
+    ifvarclass => canonify( "not_running_$(process_names)" );
+}
+
+
+body contain shell
+{
+useshell => "true";
+}
