@@ -3,68 +3,50 @@ cfe-docker
 
 Create Docker containers with managed processes.
 
-Docker monitors one process in each container and the container lives or dies with that process.
-CFEngine-managed Docker containers solve a couple of problem areas related to this:
+Docker monitors one process in each running container and the container lives or dies with that process.
+By introducing CFEngine inside Docker containers, we can alleviate a few of the issues that may arise:
 
-* It is possible to easily start multiple processes within a container, all of which will be managed automatically
-* If a managed process dies, e.g. due to a bug in application code, CFEngine will start it again within 1 minute
-* The container will live as long as the CFEngine scheduling daemon (cf-execd) lives
+* It is possible to easily start multiple processes within a container, all of which will be managed automatically, with the normal `docker run` command.
+* If a managed process dies or crashes, CFEngine will start it again within 1 minute.
+* The container itself will live as long as the CFEngine scheduling daemon (cf-execd) lives. With CFEngine, we are able to decouple the life of the container from the uptime of the service it provides.
+
+
+## How it works
+
+CFEngine, together with the cfe-docker integration policies, are installed as part of the Dockerfile. This builds CFEngine into our Docker image.
+
+The Dockerfile's `ENTRYPOINT` takes an arbitrary amount of commands (with any desired arguments) as parameters.
+When we run the Docker container these parameters get written to CFEngine policies and CFEngine takes over to ensure that the desired processes are running in the container.
+
+CFEngine scans the process table for the `basename` of the commands given to the `ENTRYPOINT` and runs the command to start the process if the `basename` is not found.
+For example, if we start the container with
+
+```
+docker run "/path/to/my/application parameters"
+```
+
+CFEngine will look for a process named `application` and run the command.
+If an entry for `application` is not found in the process table at any point in time, CFEngine will execute `/path/to/my/application parameters` to start the application once again.
+The check on the process table happens every minute.
+
+Note that it is therefore important that the command to start your application leaves a process with the basename of the command.
+This can be made more flexible by making some minor adjustments to the CFEngine policies, if desired.
 
 
 ## Usage
 
-This guide assumes you have Docker installed and working. Instructions can be found at the [Docker web site](http://www.docker.io/gettingstarted/#h_installation).
+This example assumes you have Docker installed and working. Installation instructions can be found at the [Docker web site](http://www.docker.io/gettingstarted/#h_installation).
+We will install and manage `apache2` and `sshd` in a single container.
 
 There are three steps:
 
-1. Install CFEngine into the container
-2. Copy the CFEngine Docker process management policy into the containerized CFEngine installation
-3. Start your application processes as part of the "docker run" command
+1. Install CFEngine into the container.
+2. Copy the CFEngine Docker process management policy into the containerized CFEngine installation.
+3. Start your application processes as part of the `docker run` command.
+
+### Building the container image
 
 The first two steps can be done as part of a Dockerfile, as follows.
-
-```
-FROM ubuntu
-MAINTAINER Eystein Måløy Stenberg <eytein.stenberg@gmail.com>
-
-RUN apt-get -y install wget lsb-release unzip
-
-# install latest CFEngine
-RUN wget -qO- http://cfengine.com/pub/gpg.key | apt-key add -
-RUN echo "deb http://cfengine.com/pub/apt $(lsb_release -cs) main" > /etc/apt/sources.list.d/cfengine-community.list
-RUN apt-get update
-RUN apt-get install cfengine-community
-
-# install cfe-docker process management policy
-RUN wget -qO- http://cfengine.com/pub/gpg.key | apt-key add -
-RUN echo "deb http://cfengine.com/pub/apt $(lsb_release -cs) main" > /etc/apt/sources.list.d/cfengine-community.list
-RUN apt-get update
-RUN apt-get install cfengine-community
-
-# add commands to install application code here...
-
-ENTRYPOINT ["/var/cfengine/bin/docker_processes_run.sh"]
-```
-
-By saving this file as Dockerfile to a working directory, you can then build your container with the docker build command, e.g.
-```
-docker build -t my_managed_app_image .
-```
-
-When this has finished, the container will take your application commands as parameters:
-```
-docker run -d my_managed_app_image "/etc/init.d/myapp start" "/usr/sbin/daemon"
-```
-
-In this example, myapp and daemon will be started and and managed by CFEngine.
-
-## Example
-
-In this example, we will install sshd and apache2.
-The processes will be started and managed by CFEngine.
-
-Input this as your Dockerfile (also available on [github](https://github.com/estenberg/cfe-docker/blob/master/Dockerfile)),
-and save it to a directory of your choice. It needs to be the same directory as the docker build command is run from below.
 
 ```
 FROM ubuntu
@@ -84,7 +66,7 @@ RUN cp /tmp/cfe-docker-master/cfengine/bin/* /var/cfengine/bin/
 RUN cp /tmp/cfe-docker-master/cfengine/inputs/* /var/cfengine/inputs/
 RUN rm -rf /tmp/cfe-docker-master /tmp/master.zip
 
-# apache2 and openssh is just for testing purposes
+# apache2 and openssh are just for testing purposes, install your own apps here
 RUN apt-get -y install openssh-server apache2
 RUN mkdir -p /var/run/sshd
 RUN echo "root:password" | chpasswd  # need a password for ssh
@@ -92,18 +74,23 @@ RUN echo "root:password" | chpasswd  # need a password for ssh
 ENTRYPOINT ["/var/cfengine/bin/docker_processes_run.sh"]
 ```
 
-Build the container:
+By saving this file as `Dockerfile` to a working directory, you can then build your container with the docker build command, e.g.
 ```
 docker build -t managed_image .
 ```
 
-Start the container with apache2 and sshd running and managed, forwarding a port to our SSH instance:
+### Testing the container
+
+Start the container with `apache2` and `sshd` running and managed, forwarding a port to our SSH instance:
 
 ```
 docker run -p 127.0.0.1:222:22 -d managed_image "/usr/sbin/sshd" "/etc/init.d/apache2 start"
 ```
 
-We can now log in to our new container and see that both apache2 and sshd are running. We have set the root password to
+We now clearly see one of the benefits of the cfe-docker integration: it allows to start several processes
+as part of a normal `docker run` command.
+
+We can now log in to our new container and see that both `apache2` and `sshd` are running. We have set the root password to
 "password" in the Dockerfile above and can use that to log in with ssh:
 
 ```
@@ -138,3 +125,12 @@ Apache2 is NOT running.
 # service apache2 status
 Apache2 is running (pid 173).
 ```
+
+## Adapting to your applications
+
+To make sure your applications get managed in the same manner, there are just two things you need to adjust from the above example:
+
+* In the Dockerfile used above, install your applications instead of `apache2` and `sshd`
+* When you start the container with `docker run`, specify the command line arguments to your applications rather than `apache2` and `sshd`
+
+That's it!

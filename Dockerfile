@@ -15,7 +15,7 @@ RUN cp /tmp/cfe-docker-master/cfengine/bin/* /var/cfengine/bin/
 RUN cp /tmp/cfe-docker-master/cfengine/inputs/* /var/cfengine/inputs/
 RUN rm -rf /tmp/cfe-docker-master /tmp/master.zip
 
-# apache2 and openssh is just for testing purposes
+# apache2 and openssh are just for testing purposes, install your own apps here
 RUN apt-get -y install openssh-server apache2
 RUN mkdir -p /var/run/sshd
 RUN echo "root:password" | chpasswd  # need a password for ssh
