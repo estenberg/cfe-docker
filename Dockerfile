@@ -10,7 +10,7 @@ RUN apt-get update
 RUN apt-get install cfengine-community
 
 # install cfe-docker process management policy
-RUN wget --no-check-certificate https://github.com/estenberg/cfe-docker/archive/master.zip -P /tmp/ && unzip /tmp/master.zip -d /tmp/
+RUN wget --no-check-certificate https://github.com/zzamboni/cfe-docker/archive/master.zip -P /tmp/ && unzip /tmp/master.zip -d /tmp/
 RUN cp /tmp/cfe-docker-master/cfengine/bin/* /var/cfengine/bin/
 RUN cp /tmp/cfe-docker-master/cfengine/inputs/* /var/cfengine/inputs/
 RUN rm -rf /tmp/cfe-docker-master /tmp/master.zip
