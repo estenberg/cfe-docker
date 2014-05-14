@@ -1,0 +1,9 @@
+bundle agent ssh
+{
+  vars:
+      "ssh_param[PermitRootLogin]" string => "yes";
+
+  files:
+      "/etc/ssh/sshd_config"
+        edit_line => set_config_values("ssh.ssh_param");
+}
